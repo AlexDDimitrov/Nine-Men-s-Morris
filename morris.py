@@ -37,14 +37,25 @@ class Game:
         8: [7, 12],
     }
 
-    MILLS = [
-        (0, 1, 2), (9, 10, 11), (12, 13, 14), (15, 16, 17),
-        (0, 9, 17), (2, 14, 15), (1, 10, 18), (8, 12, 5),
-        (3, 4, 5), (10, 11, 12), (13, 14, 15), (19, 20, 21),
-        (3, 10, 19), (5, 12, 18), (4, 11, 20), (8, 13, 21),
-        (6, 7, 8), (11, 12, 13), (16, 17, 18), (21, 22, 23),
-        (6, 11, 16), (8, 13, 23), (7, 12, 22), (7, 11, 20)
-    ]
+    MILLS = sorted([
+        (0, 1, 2),
+        (3, 4, 5),
+        (6, 7, 8),
+        (9, 10, 11),
+        (12, 13, 14),
+        (15, 16, 17),
+        (18, 19, 20),
+        (21, 22, 23),
+
+        (0, 9, 17),
+        (3, 10, 19),
+        (6, 11, 21),
+        (1, 4, 7),
+        (16, 20, 22),
+        (8, 12, 23),
+        (5, 13, 18),
+        (2, 14, 15)
+    ])
 
     def __init__(self):
         self.board = [0] * 24
@@ -84,6 +95,12 @@ class Game:
             if self.black_board < 3:
                 self.winner = "WHITE"
                 return True
+        if self.phase in (Phase.MOVEMENT, Phase.FLYING):
+            opponent = 2 if self.player == 1 else 1
+            if not self._has_valid_moves(opponent):
+                self.winner = "WHITE" if self.player == 1 else "BLACK"
+                return True
+        
         return False
 
     def _switch_player(self):
@@ -110,7 +127,7 @@ class Game:
             return True, "MILL! Remove an opponent's piece."
 
         self._switch_player()
-        if self.white_placed == 9 and self.black_placed == 9:
+        if self.white_placed == 9 or self.black_placed == 9:
             self.phase = Phase.MOVEMENT
         return True, "OK"
 
@@ -137,6 +154,19 @@ class Game:
 
         self._switch_player()
         return True, "OK"
+    
+    def _has_valid_moves(self, player):
+        for pos in range(24):
+            if self.board[pos] != player:
+                continue
+            if self.phase == Phase.FLYING:
+                if any(self.board[i] == 0 for i in range(24)):
+                    return True
+            else:
+                for neighbor in self.ADJACENT[pos]:
+                    if self.board[neighbor] == 0:
+                        return True
+        return False
 
     def move(self, from_pos, to_pos):
         if self.phase not in (Phase.MOVEMENT, Phase.FLYING):
@@ -147,7 +177,6 @@ class Game:
             return False, "Target position is occupied."
         
         player = self.player
-        my_pieces_count = sum(1 for x in self.board if x == player)
         
         if self.phase == Phase.MOVEMENT:
             if to_pos not in self.ADJACENT[from_pos]:
@@ -165,6 +194,9 @@ class Game:
         if my_pieces_now == 3 and self.phase == Phase.MOVEMENT:
             self.phase = Phase.FLYING
             return True, "OK (Flying enabled - you have 3 pieces)"
+
+        if self._check_winner():
+            return True, f"{self.winner} WINS"
 
         self._switch_player()
         return True, "OK"
