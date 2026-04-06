@@ -2,20 +2,39 @@ from enum import Enum
 from threading import Thread
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+
 class Phase(Enum):
     PLACEMENT = 1
     MOVEMENT = 2
     FLYING = 3
+
 class Game:
     ADJACENT = {
-        0: [1, 9],   1: [0, 2, 4],  2: [1, 5],
-        3: [4, 10],  4: [1, 3, 5, 7], 5: [2, 4, 8],
-        6: [7, 11],  7: [4, 6, 8],  8: [5, 7, 12],
-        9: [0, 10, 17], 10: [3, 9, 11, 20], 11: [6, 10, 12],
-        12: [8, 11, 13], 13: [12, 14, 22], 14: [13, 15, 18],
-        15: [14, 16], 16: [15, 17, 19], 17: [9, 16, 18],
-        18: [14, 17, 23], 19: [16, 20], 20: [10, 19, 21],
-        21: [20, 22], 22: [13, 21, 23], 23: [18, 22],
+
+        0: [1, 9],
+        1: [0, 2, 4],
+        2: [1, 14],
+        9: [0, 10, 17],
+        17: [9, 16],
+        18: [13,20],
+        14: [2, 13, 15],
+        15: [14, 16],
+        16: [15, 17, 20],
+        19: [10, 20],
+        20: [16, 18, 19, 22],
+        10: [3, 9, 11, 19],
+        3: [4, 10],
+        4: [1, 3, 5, 7],
+        5: [4, 13],
+        21: [11, 22],
+        22: [20, 21, 23],
+        23: [12, 22],
+        13: [5, 12, 14, 18],
+        12: [8, 13, 23],
+        11: [6, 10, 21],
+        6: [7, 11],
+        7: [4, 6, 8],
+        8: [7, 12],
     }
 
     MILLS = [
@@ -24,7 +43,7 @@ class Game:
         (3, 4, 5), (10, 11, 12), (13, 14, 15), (19, 20, 21),
         (3, 10, 19), (5, 12, 18), (4, 11, 20), (8, 13, 21),
         (6, 7, 8), (11, 12, 13), (16, 17, 18), (21, 22, 23),
-        (6, 11, 16), (8, 13, 23), (7, 12, 22), (7, 11, 20),
+        (6, 11, 16), (8, 13, 23), (7, 12, 22), (7, 11, 20)
     ]
 
     def __init__(self):
@@ -126,10 +145,14 @@ class Game:
             return False, "No piece of yours at that position."
         if self.board[to_pos] != 0:
             return False, "Target position is occupied."
-        if self.phase == Phase.MOVEMENT and to_pos not in self.ADJACENT[from_pos]:
-            return False, "That position is not adjacent."
-
+        
         player = self.player
+        my_pieces_count = sum(1 for x in self.board if x == player)
+        
+        if self.phase == Phase.MOVEMENT:
+            if to_pos not in self.ADJACENT[from_pos]:
+                return False, f"That position is not adjacent. Adjacent to {from_pos}: {self.ADJACENT[from_pos]}"
+
         self.board[from_pos] = 0
         self.board[to_pos] = player
         self.history.append(("move", player, from_pos, to_pos))
@@ -138,8 +161,10 @@ class Game:
             self.must_remove = True
             return True, "MILL! Remove an opponent's piece."
 
-        if sum(1 for x in self.board if x == player) == 3:
+        my_pieces_now = sum(1 for x in self.board if x == player)
+        if my_pieces_now == 3 and self.phase == Phase.MOVEMENT:
             self.phase = Phase.FLYING
+            return True, "OK (Flying enabled - you have 3 pieces)"
 
         self._switch_player()
         return True, "OK"
@@ -182,7 +207,7 @@ class Game:
 app = Flask(__name__)
 CORS(app)
 
-_session: dict = {}
+_session = {}
 
 def _state():
     if not _session:
@@ -237,7 +262,7 @@ def api_removable():
 
 def start_server(port=5000):
     import logging
-    logging.getLogger("werkzeug").setLevel(logging.ERROR)  # silence request logs
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
     Thread(
         target=lambda: app.run(port=port, debug=False, use_reloader=False),
         daemon=True
@@ -256,8 +281,7 @@ def ask_int(prompt, valid=None):
             continue
         return n
 
-
-def display(game, p1_name, p2_name):
+def print_big_board(game):
     b = game.board
 
     def p(i):
@@ -265,124 +289,21 @@ def display(game, p1_name, p2_name):
         if b[i] == 2: return "X"
         return "█"
 
-    def h(a, z):
-        return "═══" if b[a] == 0 and b[z] == 0 else "───"
-
-    S = " "
-    C = "─"
-    CE = "═"
-
-    def hc(a, z):
-        """3-char horizontal connector."""
-        return "═══" if b[a] == 0 and b[z] == 0 else "───"
-
-    def sp(n):
-        return " " * n
-
-    def vrow(c0=S, c1=S, c2=S, c3=S, c4=S, c5=S, c6=S):
-        row = [S] * 25
-        for col, ch in [(0,c0),(4,c1),(8,c2),(12,c3),(16,c4),(20,c5),(24,c6)]:
-            row[col] = ch
-        return "  " + "".join(row)
-
-    def fill(base, start, end, ch):
-        for i in range(start, end):
-            base[i] = ch
-
-    def build_row(nodes, connectors, prefix="  "):
-        row = [" "] * 25
-        for col, ch in nodes.items():
-            row[col] = ch
-        for start, end, ch in connectors:
-            for i in range(start, end):
-                row[i] = ch
-        return prefix + "".join(row)
-
-    r0 = build_row(
-        {0: p(0), 12: p(1), 24: p(2)},
-        [(1, 12, "═" if b[0]==0 and b[1]==0 else "─"),
-         (13, 24, "═" if b[1]==0 and b[2]==0 else "─")]
-    )
-
-    r1 = build_row(
-        {0: "║", 4: p(3), 12: p(4), 20: p(5), 24: "║"},
-        [(5, 12, "═" if b[3]==0 and b[4]==0 else "─"),
-         (13, 20, "═" if b[4]==0 and b[5]==0 else "─")]
-    )
-
-    r2 = build_row(
-        {0: "║", 4: "║", 8: p(6), 12: p(7), 16: p(8), 20: "║", 24: "║"},
-        [(9, 12, "═" if b[6]==0 and b[7]==0 else "─"),
-         (13, 16, "═" if b[7]==0 and b[8]==0 else "─")]
-    )
-
-    r3 = build_row(
-        {0: p(9), 4: p(10), 8: p(11), 16: p(12), 20: p(13), 24: p(14)},
-        [(1,  4,  "═" if b[9]==0  and b[10]==0 else "─"),
-         (5,  8,  "═" if b[10]==0 and b[11]==0 else "─"),
-         (17, 20, "═" if b[12]==0 and b[13]==0 else "─"),
-         (21, 24, "═" if b[13]==0 and b[14]==0 else "─")]
-    )
-
-    r4 = build_row(
-        {0: "║", 4: "║", 8: p(21), 12: p(22), 16: p(23), 20: "║", 24: "║"},
-        [(9, 12, "═" if b[21]==0 and b[22]==0 else "─"),
-         (13, 16, "═" if b[22]==0 and b[23]==0 else "─")]
-    )
-
-    r5 = build_row(
-        {0: "║", 4: p(19), 12: p(20), 20: p(18), 24: "║"},
-        [(5, 12, "═" if b[19]==0 and b[20]==0 else "─"),
-         (13, 20, "═" if b[20]==0 and b[18]==0 else "─")]
-    )
-
-    r6 = build_row(
-        {0: p(17), 12: p(16), 24: p(15)},
-        [(1, 12, "═" if b[17]==0 and b[16]==0 else "─"),
-         (13, 24, "═" if b[16]==0 and b[15]==0 else "─")]
-    )
-
     print()
-    print(r0)
-    print(r1)
-    print(r2)
-    print(r3)
-    print(r4)
-    print(r5)
-    print(r6)
+    print(f"  {p(0)}───────────{p(1)}═══════════{p(2)}")
+    print(f"  ║   {p(3)}═══════{p(4)}═══════{p(5)}   ║")
+    print(f"  ║   ║   {p(6)}═══{p(7)}═══{p(8)}   ║   ║")
+    print(f"  {p(9)}───{p(10)}═══{p(11)}       {p(12)}═══{p(13)}═══{p(14)}")
+    print(f"  ║   ║   {p(21)}═══{p(22)}═══{p(23)}   ║   ║")
+    print(f"  ║   {p(19)}═══════{p(20)}═══════{p(18)}   ║")
+    print(f"  {p(17)}═══════════{p(16)}═══════════{p(15)}")
     print()
-    print(f"  Pos:  0──────1──────2       O = {p1_name} (White)")
-    print(f"        ║  3───4───5  ║       X = {p2_name} (Black)")
-    print(f"        ║  ║ 6─7─8 ║  ║       █ = empty")
-    print(f"        9─10─11   12─13─14")
-    print(f"        ║  ║21─22─23║  ║")
-    print(f"        ║  19──20──18  ║")
-    print(f"        17──────16──────15")
-    print()
-    print(f"  {p1_name} (O): {game.white_board} on board | {9 - game.white_placed} left to place")
-    print(f"  {p2_name} (X): {game.black_board} on board | {9 - game.black_placed} left to place")
-    print(f"  Phase: {game.phase.name}")
-    print()
-    if game.must_remove:
-        print("  *** MILL! You must remove an opponent's piece! ***")
-        print()
-    print()
-    print(f"  {p1_name} (O): {game.white_board} on board | {9 - game.white_placed} left to place")
-    print(f"  {p2_name} (X): {game.black_board} on board | {9 - game.black_placed} left to place")
-    print(f"  Phase: {game.phase.name}")
-    print()
-    if game.must_remove:
-        print("  *** MILL! You must remove an opponent's piece! ***")
-        print()
 
 def player_turn(game, player_num, player_name, p1_name, p2_name):
-    print(f"  >> {player_name}'s turn ({'W' if player_num == 1 else 'B'})\n")
+    print(f"\n  >> {player_name}'s turn ({'W' if player_num == 1 else 'B'})\n")
 
     if game.phase == Phase.PLACEMENT:
         valid = game.get_valid_placements()
-
-        display(game, p1_name, p2_name)
-
         print_big_board(game)
         print(f"  Valid placements: {valid}")
         pos = ask_int(f"  {player_name}, choose a position to place: ", valid)
@@ -408,7 +329,11 @@ def player_turn(game, player_num, player_name, p1_name, p2_name):
     else:
         my_pieces = [i for i in range(24) if game.board[i] == player_num]
         print_big_board(game)
+        
+        phase_info = f"(FLYING: move anywhere)" if game.phase == Phase.FLYING else "(Adjacent moves only)"
         print(f"  Your pieces: {my_pieces}")
+        print(f"  Phase: {game.phase.name} {phase_info}")
+        
         from_pos = ask_int(f"  {player_name}, choose a piece to move (from): ", my_pieces)
 
         valid_moves = game.get_valid_moves(from_pos)
@@ -438,24 +363,6 @@ def player_turn(game, player_num, player_name, p1_name, p2_name):
 
     return True
 
-def print_big_board(game):
-    b = game.board
-
-    def p(i):
-        if b[i] == 1: return "O"
-        if b[i] == 2: return "X"
-        return "█"
-
-    print()
-    print(f"  {p(0)}───────────{p(1)}═══════════{p(2)}")
-    print(f"  ║   {p(3)}═══════{p(4)}═══════{p(5)}   ║")
-    print(f"  ║   ║   {p(6)}═══{p(7)}═══{p(8)}   ║   ║")
-    print(f"  {p(9)}───{p(10)}═══{p(11)}       {p(12)}═══{p(13)}═══{p(14)}")
-    print(f"  ║   ║   {p(21)}═══{p(22)}═══{p(23)}   ║   ║")
-    print(f"  ║   {p(19)}═══════{p(20)}═══════{p(18)}   ║")
-    print(f"  {p(17)}═══════════{p(16)}═══════════{p(15)}")
-    print()
-
 def play():
     print("=" * 50)
     print("     NINE MEN'S MORRIS — Two Player")
@@ -481,13 +388,13 @@ def play():
         result = player_turn(game, player_num, player_name, p1_name, p2_name)
 
         if isinstance(result, str) and "WINS" in result:
-            display(game, p1_name, p2_name)
+            print_big_board(game)
             winner = p1_name if "WHITE" in result else p2_name
             print(f"\n  *** {winner} WINS! Congratulations! ***\n")
             break
 
         if game.is_over():
-            display(game, p1_name, p2_name)
+            print_big_board(game)
             winner = p2_name if game.white_board < 3 else p1_name
             print(f"\n  *** {winner} WINS! Congratulations! ***\n")
             break
