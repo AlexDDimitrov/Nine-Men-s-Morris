@@ -55,9 +55,9 @@ class MCTSBot:
             moves_made += 1
 
         winner = None
-        if simulation_game.winner == "WHITE":
+        if simulation_game.winner == 1:
             winner = 1
-        elif simulation_game.winner == "BLACK":
+        elif simulation_game.winner == 2:
             winner = 2
         else:
             if simulation_game.white_board > simulation_game.black_board:
