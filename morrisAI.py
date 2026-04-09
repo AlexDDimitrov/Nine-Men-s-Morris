@@ -105,7 +105,7 @@ class MCTSBot:
             self._simulate(next_game)
 
         best_move = None
-        best_win_rate = -1.0
+        best_win_rate = -float('inf')
 
         for move in candidate_moves:
             next_game = self._apply_move(game, move)
@@ -116,7 +116,19 @@ class MCTSBot:
 
             if next_game.must_remove:
                 win_rate+= 1000
+
+            if not next_game.must_remove:
+                opponent_moves = self._get_candidate_moves(next_game)
+                opponent_can_make_mill = False
                 
+                for opp_move in opponent_moves:
+                    opp_next_state = self._apply_move(next_game, opp_move)
+                    if opp_next_state.must_remove:
+                        opponent_can_make_mill = True
+                        break
+                
+                if opponent_can_make_mill:
+                    win_rate -= 500
 
             if win_rate > best_win_rate:
                 best_win_rate = win_rate
