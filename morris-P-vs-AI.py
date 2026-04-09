@@ -10,20 +10,20 @@ def main():
         print_big_board(myGame)
         print(f"Its {myGame.player}'s turn, phase: {myGame.phase.name}")
 
-        if myGame.player == "WHITE":
+        if myGame.player == "X":
             print("Your turn!")
             if myGame.must_remove:
                 print("You must remove an opponent's piece.")
                 try:
                     target = int(input("Enter the position of the piece you want to remove (0-23): "))
                     if target in myGame.get_removable():
-                        myGame.remove_piece(target)
+                        myGame.remove(target)
                     else:
                         print("Invalid move. Try again.")
                 except ValueError:
                     print("Invalid input. Please enter a number between 0 and 23.")
                 continue
-            elif myGame.phase == "Placement":
+            elif myGame.phase.name == "PLACEMENT":
                 print(f"Free positions: {myGame.get_valid_placements()}")
                 try:
                     target = int(input("Enter the position where you want to place your piece (0-23): "))
@@ -49,7 +49,7 @@ def main():
                         print("Invalid move. Try again.")
                 except ValueError:
                     print("Invalid input. Please enter a number between 0 and 23.")
-        else:
+        elif myGame.player == "0":
             print("AI is thinking...")
             best_action = bot.get_best_action(myGame, num_simulations=1000)
             if best_action is None:
@@ -73,9 +73,9 @@ def main():
     print("\n"+ '='*30)
     print("Game Over!")
 
-    if myGame.winner == "WHITE":
+    if myGame.winner == "X":
         print("Congratulations! You win!")
-    elif myGame.winner == "BLACK":
+    elif myGame.winner == "0":
         print("AI wins! Better luck next time.")
     else:
         print("It's a draw!")
