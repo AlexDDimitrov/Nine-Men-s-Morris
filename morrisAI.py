@@ -114,6 +114,10 @@ class MCTSBot:
             wins = self.wins[state_key]
             win_rate = wins / visits if visits > 0 else 0.0
 
+            if next_game.must_remove:
+                win_rate+= 1000
+                
+
             if win_rate > best_win_rate:
                 best_win_rate = win_rate
                 best_move = move
