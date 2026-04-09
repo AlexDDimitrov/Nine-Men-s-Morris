@@ -71,7 +71,6 @@ class MCTSBot:
                 self.wins[state_key] += 1
 
     def _get_candidate_moves(self, game):
-        """Return all legal moves for the current game state."""
         if game.must_remove:
             return [("remove", r) for r in game.get_removable()]
 
@@ -86,7 +85,6 @@ class MCTSBot:
         return moves
 
     def _apply_move(self, game, move):
-        """Return a new game state after applying the given move."""
         g = copy.deepcopy(game)
         if move[0] == "remove":
             g.remove(move[1])
@@ -97,10 +95,6 @@ class MCTSBot:
         return g
 
     def get_best_action(self, game, num_simulations=1000):
-        """
-        Fix 4: Simulate from each candidate move's resulting state,
-        so the collected stats actually correspond to the states we evaluate.
-        """
         candidate_moves = self._get_candidate_moves(game)
         if not candidate_moves:
             return None
