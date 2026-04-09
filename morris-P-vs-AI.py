@@ -51,7 +51,7 @@ def main():
                     print("Invalid input. Please enter a number between 0 and 23.")
         else:
             print("AI is thinking...")
-            best_action = bot.get_best_action(myGame, num_simulations=1000)
+            best_action = bot.get_best_action(myGame, num_simulations=5000)
             if best_action is None:
                 print("AI has no valid moves.")
                 break
@@ -73,9 +73,9 @@ def main():
     print("\n"+ '='*30)
     print("Game Over!")
 
-    if myGame.winner == 1:
+    if myGame.winner == "WHITE":
         print("Congratulations! You win!")
-    elif myGame.winner == 2:
+    elif myGame.winner == "BLACK":
         print("AI wins! Better luck next time.")
     else:
         print("It's a draw!")

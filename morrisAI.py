@@ -94,7 +94,7 @@ class MCTSBot:
             g.move(move[1], move[2])
         return g
 
-    def get_best_action(self, game, num_simulations=1000):
+    def get_best_action(self, game, num_simulations=5000):
         candidate_moves = self._get_candidate_moves(game)
         if not candidate_moves:
             return None
