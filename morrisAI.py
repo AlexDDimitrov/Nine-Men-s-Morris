@@ -2,14 +2,21 @@ import random
 import copy
 from collections import defaultdict
 
+
+
 class MCTSBot:
     def __init__(self, name="Morris"):
         self.name = name
         self.visits = defaultdict(int)
         self.wins = defaultdict(int)
 
+        self.player_heatmap = defaultdict(int)
+
     def _get_state_key(self, game):
         return (tuple(game.board), game.player, game.phase.name)
+
+    def learn_from_player(self, pos):
+        self.player_heatmap[pos] += 1
 
     def _simulate(self, game):
         simulation_game = copy.deepcopy(game)
@@ -113,6 +120,14 @@ class MCTSBot:
             visits = self.visits[state_key]
             wins = self.wins[state_key]
             win_rate = wins / visits if visits > 0 else 0.0
+
+
+            action_type = move[0]
+            if action_type == "place":
+                target_pos = move[1]
+                times_player_played = self.player_heatmap[target_pos]
+                if times_player_played > 0:
+                    win_rate += times_player_played * 100
 
             if next_game.must_remove:
                 win_rate+= 1000

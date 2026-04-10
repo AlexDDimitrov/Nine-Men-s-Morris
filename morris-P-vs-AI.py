@@ -29,6 +29,7 @@ def main():
                     target = int(input("Enter the position where you want to place your piece (0-23): "))
                     if target in myGame.get_valid_placements():
                         myGame.place(target)
+                        bot.learn_from_player(target)
                     else:
                         print("Invalid move. Try again.")
                 except ValueError:
