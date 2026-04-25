@@ -2,8 +2,6 @@ import random
 import copy
 from collections import defaultdict
 
-
-
 class MCTSBot:
     def __init__(self, name="Morris"):
         self.name = name
