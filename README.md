@@ -24,5 +24,4 @@ Pos:    0────── 1 ────── 2       O = (White)
         ║  19── 20 ──18  ║  
         17──────16 ──────15  
 ```
-
-<video src="nineMenMorrisGif.mov" width="320" height="240" controls></video>
+[[![alt text]()]()](https://github.com/AlexDDimitrov/Nine-Men-s-Morris/blob/main/nineMenMorrisGif.mov)
