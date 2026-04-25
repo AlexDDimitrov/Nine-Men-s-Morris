@@ -24,3 +24,4 @@ Pos:    0────── 1 ────── 2       O = (White)
         ║  19── 20 ──18  ║  
         17──────16 ──────15  
 ```
+[![Watch the video](https://githubusercontent.com)](https://github.com/AlexDDimitrov/Nine-Men-s-Morris/blob/main/nineMenMorrisGif.mov)
